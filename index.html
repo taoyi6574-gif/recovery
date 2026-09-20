@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>账单数据只读检查</title><style>body{margin:0;background:#fff8f2;color:#2b211b;font:16px/1.7 system-ui,sans-serif}main{max-width:660px;margin:auto;padding:24px 18px}section{background:white;border:1px solid #efd9c9;border-radius:16px;padding:18px;margin:18px 0}h1{font-size:24px}h2{font-size:19px}button{padding:12px 16px;margin:6px 8px 6px 0;border:1px solid #d7a582;border-radius:10px;background:#fff0e3;color:#703408;font:inherit}button:disabled{opacity:.4}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}textarea{width:100%;min-height:210px;box-sizing:border-box}small{color:#705f52}#rawBox{display:none}</style></head><body><main><h1>🔎 账单数据只读检查</h1><p>请在<strong>以前记账的同一台手机、同一个微信或浏览器入口</strong>打开。此页只读取，不修改、不清空、不导入账单，也不会上传账单。</p><section><h2>检查结果</h2><pre id="result">正在读取…</pre><noscript>当前页面无法运行 JavaScript，请告诉我这一提示。</noscript></section><section><h2>先保留原始数据</h2><p>如果找到数据，请先备份，再尝试修复显示。</p><button id="download" disabled>下载原始备份</button><button id="show" disabled>显示原始文本</button><div id="rawBox"><p>若微信无法下载，长按下方文本全选、复制，保存在自己的笔记或文件中。请勿将完整账单发到公开场所。</p><textarea id="raw" readonly aria-label="原始账单文本"></textarea></div><p id="message" role="status"></p></section><small>找不到仅表示当前入口未读取到该存储，不能据此断定其他入口或原来的存储已被删除。请勿清除网站数据或卸载微信。</small></main><script>
+(function(){
+ var raw=null,lines=[],key='sister-saving-v1';
+ function el(id){return document.getElementById(id)}
+ lines.push('检查页面版本：1');lines.push('网站：'+location.origin);
+ try{
+  raw=window.localStorage.getItem(key);
+  if(raw===null){lines.push('原始存储：未找到');lines.push('当前入口下没有找到 sister-saving-v1。');}
+  else {
+   lines.push('原始存储：存在（'+raw.length+' 个字符）');
+   try{
+    var data=JSON.parse(raw),users=data&&data.users;
+    if(!users||typeof users!=='object'){lines.push('数据结构异常；请先下载原始备份，有可能仍能提取记录。');}
+    else {
+     ['me','sis'].forEach(function(u){var user=users[u],entries=user&&user.entries;
+      if(!Array.isArray(entries)){lines.push((u==='me'?'妹妹':'姐姐')+'：记录结构异常');return}
+      lines.push((u==='me'?'妹妹':'姐姐')+'：'+entries.length+' 条账单');
+      var dates=entries.map(function(e){return e&&typeof e.date==='string'?e.date:''}).filter(function(d){return /^\d{4}-\d{2}-\d{2}$/.test(d)}).sort();
+      if(dates.length)lines.push('日期范围：'+dates[0]+' 至 '+dates[dates.length-1]);
+     });
+     lines.push('保存的身份：'+(data.active==='sis'?'姐姐':data.active==='me'?'妹妹':'未知'));
+     lines.push('若这里有账单而首页为零，请先备份；这提示可能是显示或读取问题。');
+    }
+   }catch(e){lines.push('原始文本无法解析；请先保存备份，不要重置。');}
+   el('download').disabled=false;el('show').disabled=false;
+  }
+ }catch(e){lines.push('存储访问失败：'+e.name);lines.push('尚无法判断数据是否存在。');}
+ el('result').textContent=lines.join('\n');
+ el('show').onclick=function(){el('raw').value=raw;el('rawBox').style.display='block'};
+ el('download').onclick=function(){try{var blob=new Blob([raw],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sisters-saving-original-'+Date.now()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},60000);el('message').textContent='已尝试下载。请检查是否实际保存成功；若没有，请用“显示原始文本”备份。'}catch(e){el('message').textContent='此入口无法下载，请用“显示原始文本”备份。'}};
+})();
+</script></body></html>
